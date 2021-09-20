@@ -1,0 +1,104 @@
+---
+title: 'Lab #2'
+author: "Jung Ho Suh"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***DS 202 - Lab 2: Chocolate tasting***
+
+```{r}
+library(classdata)
+```
+
+***Searching for the Best Chocolates***
+
+We will be exploring what aspects of the chocolates may affect taste. Before setting off to the exploration, answer the following questions.
+
+**1. How are the cocoa percent distributed? Create both a histogram and a boxplot and describe them. Don’t forget to mention outliers, if there are any.**
+
+There are many outliers which can be found in the boxplot. The upper outliers are from 80 to 100 percent, and the lower outliers are from 65 to 40 percent.
+```{r}
+hist(choco$CocoaPercent)
+boxplot(choco$CocoaPercent)
+```    
+**2. How does the number of ratings depend on the country of bean origin? Draw a bar chart of the number of ratings by bean origin. [Hint: If your graph is too dense and the labels are not legible, show fewer bean origins.]**
+```{r}
+barplot(table(choco$CountryBeanOrigin), las=2,cex.names = .4)
+```    
+
+**3. Do ratings depend on the cacao percentage of a chocolate bar? Create both numerical and graphical summaries, and explain. [Hint: Think about why the scatterplot is not a very good choice for visualization here.]**
+```{r}
+boxplot(choco$Rating~choco$CocoaPercent)
+cor(choco$Rating,choco$CocoaPercent)
+```    
+
+It has a very weak negative correlation between cocoa percent and ratings for chocolate. 
+It seems like that it has no correlation between ratings and cocoa percent in the lower cocoa percentage, but you can see the trend of ratings drop when the cocoa percent gets higher.
+
+**4. How do different bean origins compare in terms of the flavor of chocolates? Are beans from some places better than the other? Create both numerical and graphical summaries, and explain.**
+
+```{r}
+library(classdata)
+library(dplyr)
+
+flavor <- table(choco$Characteristics1)
+flavor_filtered <- flavor[flavor>50]
+choco_filtered <- filter(choco, choco$Characteristics1 %in% names(flavor_filtered))
+country_filtered <- table(choco$CountryBeanOrigin) %>% 
+sort(decreasing = TRUE) %>%
+head(10) # select the top 10 countries
+
+library(ggplot2)
+choco %>% 
+  filter(Characteristics1 %in% names(flavor_filtered)) %>% # filter flavor
+  filter(CountryBeanOrigin %in% names(country_filtered)) %>% # filter country
+  ggplot()+ geom_bar(aes(x = CountryBeanOrigin, fill = Characteristics1), position = 'fill') + # position = 'fill': especially used when showing proportions (all columns add up to 1)
+  coord_flip() # rotate the coordinate
+
+tapply(choco$Rating, choco$CountryBeanOrigin, summary) %>%
+  head(5) # Country list might be too long to show, we keep it to 5
+
+```
+Following the sample answer of Q4. It is really hard to configure the graphical analysis without using ggplot and without using fill because the values are not numerical. 
+What I would do is to make a survey to the people to find out which are the most desirable tastes to a chocolate, and give the top 10 tastes a point to indicate it is a desirable taste. Then, I will sum up the total score of a chocolate in terms of taste and use it to create a graph between country of origin and taste score. Eventually with this result, I can get a list of countries that have cocoa beans which have desirable tastes to a chocolate.
+
+**5. If you work on this lab by yourself, brainstorm two analyses you would like to perform. If you work with a teammate, brainstorm at least three analyses with your teammate. Describe in plain language what comparisons are you making. Create suitable numerical and graphical summaries for your analyses. Describe the results. **
+
+**What is the most desirable chocolate company in the U.S.A. in terms of rating?**
+
+```{r}
+library(classdata)
+
+filteredchoco <- filter(choco, choco$Location == "U.S.A.")
+means <- aggregate(filteredchoco$Rating,list(filteredchoco$Company),mean)
+sortedmeans <- means[order(-means$x),]
+head10 <- head(sortedmeans,10)
+
+top10companies <- filter(filteredchoco, Company %in% head10$Group.1)
+boxplot(top10companies$Rating~top10companies$Company)
+
+tapply(top10companies$Rating, top10companies$Company, summary)
+```
+
+It seems Heirloom Cacao Preservation makes best chocolate in U.S.A. and followed by Patric.
+
+**What is the most desirable bean origin country in terms of rating?**
+
+```{r}
+library(classdata)
+
+countrymeans <- aggregate(choco$Rating,list(choco$CountryBeanOrigin),mean)
+countrysortedmeans <- countrymeans[order(-countrymeans$x),]
+countryhead10 <- head(countrysortedmeans,10)
+
+top10countries <- filter(choco, CountryBeanOrigin %in% countryhead10$Group.1)
+boxplot(top10countries$Rating~top10countries$CountryBeanOrigin, las=2)
+
+tapply(top10countries$Rating, top10countries$CountryBeanOrigin, summary)
+```
+
+It is Tobago that produces the best cocoa beans for the chocolate. 
